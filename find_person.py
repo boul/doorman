@@ -33,7 +33,7 @@ s3_bucket = os.environ['BUCKET_NAME']
 #rekognition = session.create_client('rekognition')
 
 # Setup sqs queue
-aws_region = 'us-east-1'
+aws_region = os.environ['AWS_REGION']
 polly_queue_name = os.environ['QUEUE_NAME']
 sqs = boto3.resource(service_name='sqs', region_name=aws_region)
 polly_queue = sqs.get_queue_by_name(QueueName=polly_queue_name)
