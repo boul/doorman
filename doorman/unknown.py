@@ -23,7 +23,7 @@ def unknown(event, context):
             "text": "Welcome! Sorry that we couldn't recognize you. Would you like to enroll?",
             "attachments": [
                 {
-                    "image_url": "https://s3.amazonaws.com/%s/%s" % (bucket_name, key),
+                    "image_url": "https://%s.s3.amazonaws.com/%s" % (bucket_name, key),
                     "fallback": "Nope?",
                     "callback_id": key,
                     "attachment_type": "default",

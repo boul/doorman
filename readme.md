@@ -22,6 +22,9 @@ Quite a few steps, needs cleanup, most of it can be automated.
 - Remove the `deeplens-object-detection` function, and add a function for `find_person`
 - Deploy the application to your deeplens
 
+- WIP Add S3 and SQS permissions to DeeplensGreengrassGroup role 
+
+
 - Go to the [slack api](https://api.slack.com/apps), and click "create a new app".
 - Give a name, and select your workspace
 - Activate:

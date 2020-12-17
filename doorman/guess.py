@@ -150,7 +150,7 @@ def call_slack(user_id, user_name, new_key):
             "text": "Welcome {}! Can we use this new image to better identify you in the future?".format(user_name),
             "attachments": [
                 {
-                    "image_url": "https://s3.amazonaws.com/%s/%s" % (bucket_name, new_key),
+                    "image_url": "https://%s.s3.amazonaws.com/%s" % (bucket_name, new_key),
                     "fallback": "Nope?",
                     "callback_id": new_key,
                     "attachment_type": "default",

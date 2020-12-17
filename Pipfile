@@ -11,6 +11,7 @@ name = "pypi"
 "pydub" = "==0.23.1"
 "ffmpeg" = "*"
 requests = "*"
+greengrasssdk = "*"
 
 
 [dev-packages]

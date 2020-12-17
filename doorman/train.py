@@ -17,6 +17,7 @@ dynamodb_users = os.environ['DYNAMODB_USERS']
 dynamodb_info = os.environ['DYNAMODB_INFO']
 email_source = os.environ['EMAIL_SOURCE']
 polly_queue_name = os.environ['QUEUE_NAME']
+region = os.environ['REGION']
 
 class DynamoUser:
     id = 0
@@ -216,7 +217,7 @@ def train_user(response_url, user, key):
         print("No {} could be found. Please make sure that there is data entered for that type.".format(emotion_details['type'].lower()))
         
     # drop emotion_text value onto an SQS queue
-    sqs = boto3.resource(service_name='sqs', region_name='us-east-1')
+    sqs = boto3.resource(service_name='sqs', region_name=region)
     polly_queue = sqs.get_queue_by_name(QueueName=polly_queue_name)
     polly_queue.send_message(MessageBody="Hello %s! %s" % (user.name, emotion_text))
     
@@ -233,7 +234,7 @@ def train_user(response_url, user, key):
             "text": "Thank you! Your new picture was successfully imported into the recognition engine. %s" % emotion_text,
             "attachments": [
                 {
-                    "image_url": "https://s3.amazonaws.com/%s/%s" % (bucket_name, new_key),
+                    "image_url": "https://%s.s3.amazonaws.com/%s" % (bucket_name, new_key),
                     "fallback": "Nope?",
                     "attachment_type": "default",
                 }
