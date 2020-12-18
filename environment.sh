@@ -11,5 +11,5 @@ export QUEUE_NAME=$name-polly
 export BUCKET_NAME=$name-images
 export REKOGNITION_COLLECTION_ID=$name
 export DYNAMODB_USERS=$name-user
-export DYNAMODB_INFO=$name-info
+# export DYNAMODB_INFO=$name-info
 export AWS_ACCOUNT_NUMBER=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .accountId)

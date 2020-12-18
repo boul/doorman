@@ -20,23 +20,30 @@ def unknown(event, context):
         
         data = {
             "channel": slack_training_channel_id,
-            "text": "Welcome! Sorry that we couldn't recognize you. Would you like to enroll?",
+            "text": "Unrecognized person, do you want me to recognize this person?",
             "attachments": [
                 {
                     "image_url": "https://%s.s3.amazonaws.com/%s" % (bucket_name, key),
                     "fallback": "Nope?",
                     "callback_id": key,
                     "attachment_type": "default",
+                    #  "actions": [{
+                    #         "name": "username",
+                    #         "text": "Select a username...",
+                    #         "type": "select",
+                    #         "data_source": "users",
+                    #         "value": "new-user"
+                    #     },
                     "actions": [
                         {
                             "name": "register",
-                            "text": "Yes",
+                            "text": "Yes, use this picture!",
                             "type": "button",
                             "value": "register"
                         },
                         {
                             "name": "discard",
-                            "text": "Ignore",
+                            "text": "No! Delete Picture!",
                             "style": "danger",
                             "type": "button",
                             "value": "ignore",

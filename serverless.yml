@@ -165,36 +165,36 @@ resources:
               Resource: arn:aws:dynamodb:*:*:table/my-table
         Roles:
           - Ref: IamRoleLambdaExecution
-    DynamoDbInfoTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${env:DYNAMODB_INFO}
-        AttributeDefinitions:
-          - AttributeName: type
-            AttributeType: S
-          - AttributeName: datetime
-            AttributeType: S
-        KeySchema:
-          - AttributeName: type
-            KeyType: HASH
-          - AttributeName: datetime
-            KeyType: RANGE
-        ProvisionedThroughput:
-          ReadCapacityUnits: 5
-          WriteCapacityUnits: 5
-    DynamoDBInfoIamPolicy:
-      Type: AWS::IAM::Policy
-      DependsOn: DynamoDbInfoTable
-      Properties:
-        PolicyName: lambda-dynamodb
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:GetItem
-                - dynamodb:PutItem
-                - dynamodb:Query
-              Resource: arn:aws:dynamodb:*:*:table/my-table
-        Roles:
-          - Ref: IamRoleLambdaExecution
+    # DynamoDbInfoTable:
+    #   Type: AWS::DynamoDB::Table
+    #   Properties:
+    #     TableName: ${env:DYNAMODB_INFO}
+    #     AttributeDefinitions:
+    #       - AttributeName: type
+    #         AttributeType: S
+    #       - AttributeName: datetime
+    #         AttributeType: S
+    #     KeySchema:
+    #       - AttributeName: type
+    #         KeyType: HASH
+    #       - AttributeName: datetime
+    #         KeyType: RANGE
+    #     ProvisionedThroughput:
+    #       ReadCapacityUnits: 5
+    #       WriteCapacityUnits: 5
+    # DynamoDBInfoIamPolicy:
+    #   Type: AWS::IAM::Policy
+    #   DependsOn: DynamoDbInfoTable
+    #   Properties:
+    #     PolicyName: lambda-dynamodb
+    #     PolicyDocument:
+    #       Version: '2012-10-17'
+    #       Statement:
+    #         - Effect: Allow
+    #           Action:
+    #             - dynamodb:GetItem
+    #             - dynamodb:PutItem
+    #             - dynamodb:Query
+    #           Resource: arn:aws:dynamodb:*:*:table/my-table
+    #     Roles:
+    #       - Ref: IamRoleLambdaExecution

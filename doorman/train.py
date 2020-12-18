@@ -61,12 +61,12 @@ def train(event, context):
                             "type": "text",
                             "name": "name"
                         }
-                        ,{
-                            "label": "Email",
-                            "type": "text",
-                            "subtype": "email",
-                            "name": "email"
-                        }
+                        # ,{
+                        #     "label": "Email",
+                        #     "type": "text",
+                        #     "subtype": "email",
+                        #     "name": "email"
+                        # }
                     ]
                 })
             }
@@ -77,10 +77,10 @@ def train(event, context):
                 json=message)
             print(resp)
             
-            message = {
-                "text": "You are in the progress of registering.  If you cancel, you will need to be recognized again to register."
-            }
-            print(message)
+            # message = {
+            #     "text": "You are in the progress of registering.  If you cancel, you will need to be recognized again to register."
+            # }
+            # print(message)
     
             requests.post(
                 response_url_curr,
@@ -132,7 +132,7 @@ def train(event, context):
         # if we got a discard action, send an update first, and then remove the referenced image
         if registered_action == 'discard':
             message = {
-                "text": "Ok, I ignored this image."
+                "text": "Ok, I ignored & deleted this image."
             }
             print(message)
     
@@ -187,39 +187,10 @@ def train_user(response_url, user, key):
     else:
         emotion_text = "\n\nYou seem %s. " % (emotion_details['emotion'].lower())
     
-    # get 10 most recent news type and choose a random article to present to user
-    dynamo = boto3.resource('dynamodb')
-    table_info = dynamo.Table(dynamodb_info)
-
-    top_num_articles = 10
-    upper_limit = top_num_articles
-	
-    response = table_info.query(
-		KeyConditionExpression=Key('type').eq(emotion_details['type'].lower()),
-		ScanIndexForward=False,
-        Limit=top_num_articles
-    )
-    
-    print('top 10 articles most recent')
-    print(response)
-    
-    if response['Count'] > 0:
-        # if there's less articles than the requested top 10, get all those articles
-        if response['Count'] < top_num_articles:
-            upper_limit = response['Count']
-    
-        # accounts for array starting at index 0
-        random_int = random.randint(0, upper_limit-1)
-        
-        most_recent_info_item = response['Items'][random_int]
-        emotion_text += "\n\nHere's a {}: {}".format(emotion_details['type'].lower(),most_recent_info_item['description'])
-    else:
-        print("No {} could be found. Please make sure that there is data entered for that type.".format(emotion_details['type'].lower()))
-        
     # drop emotion_text value onto an SQS queue
     sqs = boto3.resource(service_name='sqs', region_name=region)
     polly_queue = sqs.get_queue_by_name(QueueName=polly_queue_name)
-    polly_queue.send_message(MessageBody="Hello %s! %s" % (user.name, emotion_text))
+    polly_queue.send_message(MessageBody="Hello %s! I took a close look at your picture! %s" % (user.name, emotion_text))
     
     # move the s3 file to the 'trained' location
     s3 = boto3.resource('s3')
@@ -231,7 +202,7 @@ def train_user(response_url, user, key):
     if response_url:
         message = {
             "response_type": "in_channel",
-            "text": "Thank you! Your new picture was successfully imported into the recognition engine. %s" % emotion_text,
+            "text": "Thank you! This picture was imported into the recognition engine. %s" % emotion_text,
             "attachments": [
                 {
                     "image_url": "https://%s.s3.amazonaws.com/%s" % (bucket_name, new_key),
@@ -246,78 +217,78 @@ def train_user(response_url, user, key):
     # Send email
     #send_email(user)
 
-def send_email(user):
-    # fetch db
-    client = boto3.resource('dynamodb')
+# def send_email(user):
+#     # fetch db
+#     client = boto3.resource('dynamodb')
     
-    should_send_email = True
+#     should_send_email = True
     
-    if user.lastEmailedTime != 'none':
-        print ('check the time diff')
-        lastEmailedTime = datetime.datetime.strptime(user.lastEmailedTime, "%Y-%m-%d %H:%M:%S.%f")
-        print(lastEmailedTime)
+#     if user.lastEmailedTime != 'none':
+#         print ('check the time diff')
+#         lastEmailedTime = datetime.datetime.strptime(user.lastEmailedTime, "%Y-%m-%d %H:%M:%S.%f")
+#         print(lastEmailedTime)
         
-        currTime = datetime.datetime.now()
-        print(currTime)
+#         currTime = datetime.datetime.now()
+#         print(currTime)
         
-        difference = currTime - lastEmailedTime
-        print(difference)
+#         difference = currTime - lastEmailedTime
+#         print(difference)
         
-        #update this to 1 after done testing
-        print(difference.days)
-        if difference.days < 1:
-            should_send_email = False
+#         #update this to 1 after done testing
+#         print(difference.days)
+#         if difference.days < 1:
+#             should_send_email = False
         
-    if should_send_email:
-        table_info = client.Table(dynamodb_info)
-        client = boto3.client('ses')
+#     if should_send_email:
+#         table_info = client.Table(dynamodb_info)
+#         client = boto3.client('ses')
     
-        response = table_info.query(
-            KeyConditionExpression=Key('type').eq('news'),
-            ScanIndexForward=False,
-        )
+#         response = table_info.query(
+#             KeyConditionExpression=Key('type').eq('news'),
+#             ScanIndexForward=False,
+#         )
         
-        most_recent_news_item = response['Items'][0]
+#         most_recent_news_item = response['Items'][0]
         
-        print(most_recent_news_item)
+#         print(most_recent_news_item)
             
-        try:
-            response = client.send_email(
-                Destination = { 'ToAddresses': [user.email] },
-                Message = {
-                    'Body': {
-                        'Text': {
-                            'Charset': 'UTF-8',
-                            'Data': "Hello {}, \n\n Here is your most recent news news:\n\n{}".format(user.name, most_recent_news_item['description']),
-                        },
-                    },
-                    'Subject': {
-                        'Charset': 'UTF-8',
-                        'Data': "Your Daily News",
-                    },
-                },
-                Source = email_source
-            )
+#         try:
+#             response = client.send_email(
+#                 Destination = { 'ToAddresses': [user.email] },
+#                 Message = {
+#                     'Body': {
+#                         'Text': {
+#                             'Charset': 'UTF-8',
+#                             'Data': "Hello {}, \n\n Here is your most recent news news:\n\n{}".format(user.name, most_recent_news_item['description']),
+#                         },
+#                     },
+#                     'Subject': {
+#                         'Charset': 'UTF-8',
+#                         'Data': "Your Daily News",
+#                     },
+#                 },
+#                 Source = email_source
+#             )
     
-            print(response)
+#             print(response)
             
-            newUpdatedtime = str(datetime.datetime.now())
+#             newUpdatedtime = str(datetime.datetime.now())
             
-            table = client.Table(dynamodb_users)
-            response = table.update_item(
-                Key={'id': user.id},
-                UpdateExpression="set lastEmailedTime = :t",
-                ExpressionAttributeValues={
-                    ':t': newUpdatedtime
-                },
-                ReturnValues="UPDATED_NEW"
-            )
-            print(response)
+#             table = client.Table(dynamodb_users)
+#             response = table.update_item(
+#                 Key={'id': user.id},
+#                 UpdateExpression="set lastEmailedTime = :t",
+#                 ExpressionAttributeValues={
+#                     ':t': newUpdatedtime
+#                 },
+#                 ReturnValues="UPDATED_NEW"
+#             )
+#             print(response)
             
-            #update last email time in users table
-        except Exception as ex:
-            print('email failed sending')
-            print(ex)
+#             #update last email time in users table
+#         except Exception as ex:
+#             print('email failed sending')
+#             print(ex)
 
 
 def get_emotion_details(rekognition_response):
@@ -335,18 +306,18 @@ def get_emotion_details(rekognition_response):
             	emotion = obj['Type']
             	emotion_confidence = obj['Confidence']
             	
-        # find type of data to serve up
-        emotion_response_type = 'FACT'
-        if emotion_confidence > 55 and (emotion == 'HAPPY' or emotion == 'CALM' or emotion == 'SURPRISED'):
-        	emotion_response_type = 'QUOTE'
-        elif emotion_confidence > 55 and (emotion == 'SAD' or emotion == 'ANGRY' or emotion == 'DISGUSTED'):
-        	emotion_response_type = 'JOKE'
+    #     # find type of data to serve up
+    #     emotion_response_type = 'FACT'
+    #     if emotion_confidence > 55 and (emotion == 'HAPPY' or emotion == 'CALM' or emotion == 'SURPRISED'):
+    #     	emotion_response_type = 'QUOTE'
+    #     elif emotion_confidence > 55 and (emotion == 'SAD' or emotion == 'ANGRY' or emotion == 'DISGUSTED'):
+    #     	emotion_response_type = 'JOKE'
     	
     	# return collected data
         return {
     		'emotion': emotion,
-    		'confidence': emotion_confidence,
-    		'type': emotion_response_type
+    		'confidence': emotion_confidence
+    # 		'type': emotion_response_type
         }
         
     except Exception as ex:

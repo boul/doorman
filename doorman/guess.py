@@ -4,6 +4,9 @@ import requests
 import hashlib
 import os
 import datetime
+import urllib
+
+
 
 bucket_name = os.environ['BUCKET_NAME']
 slack_token = os.environ['SLACK_API_TOKEN']
@@ -11,6 +14,8 @@ slack_channel_id = os.environ['SLACK_CHANNEL_ID']
 slack_training_channel_id = os.environ['SLACK_TRAINING_CHANNEL_ID']
 rekognition_collection_id = os.environ['REKOGNITION_COLLECTION_ID']
 dynamodb_users = os.environ['DYNAMODB_USERS']
+region = os.environ['REGION']
+polly_queue_name = os.environ['QUEUE_NAME']
 
 def guess(event, context):
     try:
@@ -39,7 +44,8 @@ def guess(event, context):
                 Image=image,
                 MaxFaces=1,
                 FaceMatchThreshold=70)
-    
+            
+          
         except Exception as ex:
             # no faces detected, delete image
             print("No faces found, deleting")
@@ -62,6 +68,7 @@ def guess(event, context):
         print (resp)
         user_id = resp['FaceMatches'][0]['Face']['ExternalImageId']
         similarity = resp['FaceMatches'][0]['Similarity']
+        
         
         # if face similiarity is too low, throw into unmatched
         if int(similarity) < 80:
@@ -105,7 +112,7 @@ def guess(event, context):
             print(difference.seconds)
             print(difference.days)
         
-            if difference.seconds < 1200 and difference.days == 0:
+            if difference.seconds < 10 and difference.days == 0:
                 print('user has been recognized within {} minutes, which is under the threshold of 20 minutes.'.format(difference.seconds/60))
                 s3.Object(bucket_name, key).delete()
                 return
@@ -130,10 +137,12 @@ def guess(event, context):
         # alert taining lambda
         # NOTE: To use this function call, you'll need to define an environment variable of TRAIN_API
         #       in serverless.yml and environment.sh, and set the value to the train API uri
-        #call_train_lambda(user_id, new_key)
+        # call_train_lambda(user_id, new_key)
     
         # alert user
-        call_slack(user_id, user_name, new_key)
+        
+        call_slack(user_id, user_name, new_key, similarity)
+        call_sqs(user_name)
     
         return {}
         
@@ -142,12 +151,12 @@ def guess(event, context):
         print(ex)
 
 
-def call_slack(user_id, user_name, new_key):
+def call_slack(user_id, user_name, new_key, similarity):
     try:
         # alert user
         data = {
             "channel": slack_training_channel_id,
-            "text": "Welcome {}! Can we use this new image to better identify you in the future?".format(user_name),
+            "text": "Welcome {}! ({}% confidence) - Can we use this new image to better identify you in the future?".format(user_name, int(similarity)),
             "attachments": [
                 {
                     "image_url": "https://%s.s3.amazonaws.com/%s" % (bucket_name, new_key),
@@ -163,18 +172,36 @@ def call_slack(user_id, user_name, new_key):
                         },
                         {
                             "name": "discard",
-                            "text": "Ignore",
+                            "text": "No, Delete this image!",
                             "style": "danger",
                             "type": "button",
-                            "value": "ignore",
-                            "confirm": {
-                                "title": "Are you sure?",
-                                "text": "Are you sure you want to ignore and delete this image?",
-                                "ok_text": "Yes",
-                                "dismiss_text": "No"
-                            }
+                            "value": "ignore"
+                            # "confirm": {
+                            #     "title": "Are you sure?",
+                            #     "text": "Are you sure you want to ignore and delete this image?",
+                            #     "ok_text": "Yes",
+                            #     "dismiss_text": "No"
+                            # }
                         }
                     ]
+                }
+            ]
+        }
+        
+        resp = requests.post("https://slack.com/api/chat.postMessage", headers={'Content-Type':'application/json;charset=UTF-8', 'Authorization': 'Bearer %s' % slack_token}, json=data)
+        print(resp.json())
+        
+        # alert user
+        data = {
+            "channel": slack_channel_id,
+            "text": "Hi {}!, Welcome in Lab271! - ({}% confidence)".format(user_name, int(similarity)),
+            "attachments": [
+                {
+                    "image_url": "https://%s.s3.amazonaws.com/%s" % (bucket_name, new_key),
+                    "fallback": "Nope?",
+                    "callback_id": new_key,
+                    "attachment_type": "default",
+                  
                 }
             ]
         }
@@ -206,7 +233,16 @@ def call_train_lambda(user_id, new_key):
         
         resp = requests.post(os.environ['TRAIN_API'], headers={'Content-Type':'application/json;charset=UTF-8'}, data=data)
         print(resp)
-        
+      
     except Exception as ex:
         print("guess.py call_train_lambda encountered an error")
         print(ex)
+        
+def call_sqs(user_name):
+
+ # drop emotion_text value onto an SQS queue
+    sqs = boto3.resource(service_name='sqs', region_name=region)
+    polly_queue = sqs.get_queue_by_name(QueueName=polly_queue_name)
+    polly_queue.send_message(MessageBody="Hello %s! Welcome back in Lab271!" % (user_name))
+
+    
