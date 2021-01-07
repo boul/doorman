@@ -112,8 +112,8 @@ def guess(event, context):
             print(difference.seconds)
             print(difference.days)
         
-            if difference.seconds < 10 and difference.days == 0:
-                print('user has been recognized within {} minutes, which is under the threshold of 20 minutes.'.format(difference.seconds/60))
+            if difference.seconds < 900 and difference.days == 0:
+                print('user has been recognized within {} minutes, which is under the threshold of 15 minutes.'.format(difference.seconds/60))
                 s3.Object(bucket_name, key).delete()
                 return
             
